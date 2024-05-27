@@ -148,6 +148,8 @@ def main():
 
     setup_curobo_logger("warn")
     past_pose = None
+    n_obstacle_cuboids = 30
+    n_obstacle_mesh = 10
 
     # warmup curobo instance
     usd_help = UsdHelper()
@@ -160,7 +162,7 @@ def main():
     default_config = robot_cfg["kinematics"]["cspace"]["retract_config"]
     robot_cfg["kinematics"]["collision_sphere_buffer"] += 0.02
 
-    robot, _ = add_robot_to_scene(robot_cfg, my_world)
+    robot, robot_prim_path = add_robot_to_scene(robot_cfg, my_world)
 
     articulation_controller = robot.get_articulation_controller()
 
@@ -191,7 +193,8 @@ def main():
         use_cuda_graph_metrics=True,
         use_cuda_graph_full_step=False,
         self_collision_check=True,
-        collision_checker_type=CollisionCheckerType.BLOX,
+        collision_checker_type=CollisionCheckerType.MESH,
+        collision_cache={"obb": n_obstacle_cuboids, "mesh": n_obstacle_mesh},
         use_mppi=True,
         use_lbfgs=False,
         use_es=False,
@@ -241,7 +244,7 @@ def main():
 
         step_index = my_world.current_time_step_index
 
-        if step_index == 0:
+        if step_index <= 2:
             my_world.reset()
             idx_list = [robot.get_dof_index(x) for x in j_names]
             robot.set_joint_positions(default_config, idx_list)
@@ -254,6 +257,21 @@ def main():
             init_curobo = True
         step += 1
         step_index = step
+
+        if step_index % 1000 == 0:
+            print("Updating world")
+            obstacles = usd_help.get_obstacles_from_stage(
+                # only_paths=[obstacles_path],
+                ignore_substring=[
+                    robot_prim_path,
+                    "/World/target",
+                    "/World/defaultGroundPlane",
+                    "/curobo",
+                ],
+                reference_prim_path=robot_prim_path,
+            )
+            obstacles.add_obstacle(world_cfg_table.cuboid[0])
+            mpc.world_coll_checker.load_collision_model(obstacles)
 
         # position and orientation of target virtual cube:
         cube_position, cube_orientation = target.get_world_pose()
