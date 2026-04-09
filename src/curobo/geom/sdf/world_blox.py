@@ -81,10 +81,8 @@ class WorldBloxCollision(WorldVoxelCollision):
                     integrator_types.append(k.integrator_type)
                 # create a mapper instance:
                 self._blox_mapper = Mapper(
-                    voxel_sizes=voxel_sizes,
+                    voxel_sizes_m=voxel_sizes,
                     integrator_types=integrator_types,
-                    free_on_destruction=False,
-                    cuda_device_id=self.tensor_args.device.index,
                 )
                 self._blox_voxel_sizes = voxel_sizes
             # load map from file if it exists:
