@@ -27,10 +27,12 @@ from curobo.util.logger import log_error, log_info, log_warn
 try:
     # Third Party
     from nvblox_torch.mapper import Mapper
+    from nvblox_torch.projective_integrator_types import ProjectiveIntegratorType
 except ImportError:
     log_warn("nvblox torch wrapper is not installed, loading abstract class")
     # Standard Library
     from abc import ABC as Mapper
+    ProjectiveIntegratorType = None
 
 
 class WorldBloxCollision(WorldVoxelCollision):
@@ -80,9 +82,13 @@ class WorldBloxCollision(WorldVoxelCollision):
                     voxel_sizes.append(k.voxel_size)
                     integrator_types.append(k.integrator_type)
                 # create a mapper instance:
+                integrator_type_enums = [
+                    ProjectiveIntegratorType(t) if isinstance(t, str) else t
+                    for t in integrator_types
+                ]
                 self._blox_mapper = Mapper(
                     voxel_sizes_m=voxel_sizes,
-                    integrator_types=integrator_types,
+                    integrator_types=integrator_type_enums,
                 )
                 self._blox_voxel_sizes = voxel_sizes
             # load map from file if it exists:
